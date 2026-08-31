@@ -1,0 +1,904 @@
+:root {
+  color-scheme: dark !important;
+  --bg-image: none;
+  --bg-opacity: 0.25;
+  --accent: #4f8cff;
+  --titlebar-bg: rgba(8, 10, 15, 0.5);
+  --sidebar-bg: rgba(8, 10, 15, 0.72);
+  --panel-bg: rgba(14, 18, 26, 0.72);
+  --harness-bg: rgba(13, 18, 28, 0.78);
+  --drawer-bg: rgba(10, 13, 19, 0.82);
+  --overlay-bg: linear-gradient(135deg, rgba(5, 7, 12, 0.86), rgba(8, 11, 17, 0.72));
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #e8edf7;
+  --muted: #8b96a8;
+  --danger: #ff5c7a;
+  --success: #3ddc97;
+  --blur: 26px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  font-family: Inter, "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif;
+  background: #080a0f;
+  color: var(--text);
+  overflow: hidden;
+
+  /* Let the App's personalization flow into the embedded dsh shell.
+     These are intentionally !important: dsh's ThemePresenter writes the same
+     --dsw-* tokens as inline styles on <body>, and the app shell should win
+     so background/accent/glass settings also affect chat, work areas, and
+     portal surfaces. */
+  --dsw-alias-bg-base: var(--harness-bg) !important;
+  --dsw-alias-bg-layer-1: var(--harness-bg) !important;
+  --dsw-alias-bg-layer-2: var(--panel-bg) !important;
+  --dsw-alias-bg-layer-3: var(--panel-bg) !important;
+  --dsw-alias-bg-module-platform: var(--panel-bg) !important;
+  --dsw-alias-bg-overlay: var(--drawer-bg) !important;
+  --dsw-alias-bg-multi-select: var(--panel-bg) !important;
+  --dsw-specific-sidebar-fill: var(--sidebar-bg) !important;
+  --dsw-specific-sidebar-nav-item-active: color-mix(in srgb, var(--accent) 16%, var(--sidebar-bg)) !important;
+  --dsw-specific-sidebar-nav-item-active-accent: color-mix(in srgb, var(--accent) 22%, transparent) !important;
+  --dsw-specific-sidebar-nav-item-hover: color-mix(in srgb, var(--accent) 8%, var(--sidebar-bg)) !important;
+  --dsw-specific-bubble: color-mix(in srgb, var(--accent) 16%, var(--panel-bg)) !important;
+  --dsw-specific-bubble-highlight: color-mix(in srgb, var(--accent) 24%, var(--panel-bg)) !important;
+  --dsw-specific-input-major: var(--dsh-input-bg, var(--panel-bg)) !important;
+  --dsw-specific-selector: var(--panel-bg) !important;
+  --dsw-specific-tip: var(--panel-bg) !important;
+  --dsw-specific-menu: var(--dsh-settings-bg, var(--panel-bg)) !important;
+  --dsw-alias-bg-overlay: var(--dsh-settings-bg, var(--drawer-bg)) !important;
+
+  --dsw-alias-border-l1: var(--border) !important;
+  --dsw-alias-border-l2: rgba(255, 255, 255, 0.12) !important;
+  --dsw-alias-border-l2-darkmode-thin: var(--border) !important;
+  --dsw-alias-border-l3: rgba(255, 255, 255, 0.16) !important;
+  --dsw-alias-border-l4: rgba(255, 255, 255, 0.20) !important;
+
+  --dsw-alias-brand-primary: var(--accent) !important;
+  --dsw-alias-brand-primary-invert: var(--accent) !important;
+  --dsw-alias-brand-text: var(--accent) !important;
+  --dsw-alias-button-primary-fill: var(--accent) !important;
+  --dsw-alias-button-primary-hover: color-mix(in srgb, var(--accent) 82%, #fff) !important;
+  --dsw-alias-button-info-fill: var(--accent) !important;
+  --dsw-alias-button-info-hover: color-mix(in srgb, var(--accent) 82%, #fff) !important;
+  --dsw-alias-state-business-primary: var(--accent) !important;
+  --dsw-alias-state-business-tertiary: color-mix(in srgb, var(--accent) 16%, transparent) !important;
+  --dsw-alias-label-primary-foreground: #fff !important;
+  --dsw-alias-interactive-bg-hover-accent: color-mix(in srgb, var(--accent) 12%, transparent) !important;
+  --dsw-alias-interactive-bg-active: color-mix(in srgb, var(--accent) 16%, transparent) !important;
+  --dsw-alias-interactive-bg-hover-solid: color-mix(in srgb, var(--accent) 10%, transparent) !important;
+
+  --dsw-alias-label-primary: var(--text) !important;
+  --dsw-alias-label-secondary: var(--muted) !important;
+  --dsw-alias-label-tertiary: rgba(210, 218, 230, 0.68) !important;
+  --dsw-alias-label-dimmed: rgba(255, 255, 255, 0.34) !important;
+  --dsw-alias-label-caption: rgba(255, 255, 255, 0.42) !important;
+}
+
+/* Keep DSH-owned settings dialogs and the composer readable independently of
+   the app shell's broad panel transparency. */
+body[data-ds-dark-theme] [role="dialog"],
+body[data-ds-dark-theme] [data-settings-panel],
+body[data-ds-dark-theme] [data-settings-drawer] {
+  background: var(--dsh-settings-bg) !important;
+}
+
+/* Composer readability: the capsule itself owns the ONE translucent layer
+   driven by the "DSH 文本输入框" slider. Target the card element directly —
+   relying only on the --dsw-specific-input-major token can lose the cascade
+   to theme styles injected later, leaving an opaque card under the textarea
+   so the slider appears to do nothing. */
+body[data-ds-dark-theme] .content-area [data-composer-card] {
+  background: var(--dsh-input-bg) !important;
+}
+
+/* The dsh composer stacks an absolutely-positioned textarea over a glyph
+   backdrop. Forcing a second translucent background on the textarea doubled
+   the layer (2x alpha — the opacity slider responded on the wrong curve and
+   the text rows never tracked it). Keep the textarea transparent so only the
+   card layer follows the slider; the forced color keeps draft text readable
+   over it. */
+body[data-ds-dark-theme] .content-area [data-composer-card] textarea,
+body[data-ds-dark-theme] .content-area textarea {
+  background: transparent !important;
+  color: var(--dsw-alias-label-primary) !important;
+}
+
+/* dsh 的设置/对话框面板按"整个视口"定尺寸：.overlay 是 position:fixed inset:0，
+   由于 .content-area 带 backdrop-filter（成为 fixed 的包含块），遮罩正确铺满
+   内容区；但面板高度写的是 min(800px, calc(100vh - 48px))，用的是 100vh 整个
+   视口高度。嵌入后内容区比视口矮（被标题栏/顶栏/标签栏占掉约 160px），面板因此
+   上下各超出 ~60px，再被 .content-area 的 overflow:hidden 裁掉。这里把对话框压
+   回内容区范围内，超出的内容由面板内部 .options（本就 overflow-y:auto）滚动。 */
+.content-area [role="dialog"],
+.content-area [data-settings-panel],
+.content-area [data-settings-drawer] {
+  max-height: calc(100% - 16px) !important;
+  max-width: calc(100% - 16px) !important;
+}
+
+.app-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--bg-image);
+  background-size: cover;
+  background-position: center;
+  opacity: var(--bg-opacity);
+  pointer-events: none;
+}
+
+.app-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: var(--overlay-bg);
+  pointer-events: none;
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.titlebar {
+  height: 40px;
+  flex: 0 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 14px;
+  background: var(--titlebar-bg);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(var(--blur)) saturate(140%);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.titlebar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.titlebar-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.window-controls {
+  display: flex;
+  height: 100%;
+  -webkit-app-region: no-drag;
+}
+
+.window-controls button {
+  width: 44px;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.window-controls button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.window-controls .close:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.app-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 10px;
+}
+
+/* Stacking order inside the app body is explicit: both the topbar/tabstrip and
+   the content area create stacking contexts (backdrop-filter), so without
+   these z-indexes a later sibling (the dsh shell in .content-area) paints
+   over popups opened from an earlier one — the new-tab menu became
+   unreachable. The settings drawer (fixed, z-index 50) stays above all of it. */
+.topbar {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--blur)) saturate(140%);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.content-area {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+  background: transparent;
+  backdrop-filter: blur(var(--blur)) saturate(140%);
+  /* Below the tab strip so the strip's popups stay clickable; the dsh shell's
+     own high-z-index overlays are confined to this stacking context. */
+  position: relative;
+  z-index: 1;
+  /* Cancel the .app-body row gap so the strip (square bottom) and this pane
+     (square top) read as one window panel. */
+  margin-top: -10px;
+}
+
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 42%, transparent);
+  color: #fff;
+}
+
+input, select, textarea {
+  -webkit-app-region: no-drag;
+  user-select: text;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-size: 12.5px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+input[type="radio"] {
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  accent-color: var(--accent);
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  -webkit-appearance: none;
+}
+
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.connection-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.connection-toolbar label,
+.connection-card-header,
+.default-connection {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.connection-card-header {
+  flex-wrap: wrap;
+}
+
+.connection-card-header > input[type="text"] {
+  flex: 1;
+  min-width: 100px;
+}
+
+button {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+}
+
+button:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+button:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+}
+
+button.primary:hover {
+  background: color-mix(in srgb, var(--accent) 84%, #fff);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.badge {
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.badge.running {
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 40%, transparent);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+
+.settings-drawer {
+  position: fixed;
+  top: 40px;
+  right: 0;
+  bottom: 0;
+  width: min(520px, 92vw);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--drawer-bg);
+  border-left: 1px solid var(--border);
+  box-shadow: -16px 0 48px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(28px) saturate(150%);
+  transform: translateX(105%);
+  transition: transform 0.22s ease;
+}
+
+.settings-drawer.open { transform: translateX(0); }
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-tabs button {
+  position: relative;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 7px 12px;
+  border-radius: 8px;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.settings-tabs button:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+.settings-tabs button.active {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--text);
+}
+
+/* Same bottom accent bar as the browser-style tabs, for a unified look. */
+.settings-tabs button.active::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.settings-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+.settings-pane { display: none; }
+.settings-pane.active { display: block; }
+
+.card {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.conn-card {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.conn-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.conn-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-hint {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 6px 0 10px;
+}
+
+button.danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+button.danger:hover {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+
+.console-output {
+  background: rgba(2, 5, 9, 0.7);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  min-height: 180px;
+  max-height: 40vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-family: Consolas, monospace;
+  font-size: 11.5px;
+}
+
+/* Unified setting row: label · control · value. Every slider/select/picker in
+   the settings panes uses this single layout for one integrated look. */
+.setting-row {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr) 58px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+}
+
+.setting-row + .setting-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.setting-row-label {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.setting-row-control {
+  display: flex;
+  min-width: 0;
+}
+
+.setting-row-control select,
+.setting-row-control input {
+  width: 100%;
+}
+
+.setting-row-control input[type="color"] {
+  width: 100%;
+  height: 30px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.setting-row-slider {
+  width: 100%;
+}
+
+.setting-row-value {
+  text-align: right;
+  color: var(--text);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---- Firefox-style tab strip ---- */
+
+/* The tab strip must sit above .content-area in the stacking order: the
+   new-tab menu and its backdrop live here and must be clickable even though
+   they visually overlap the dsh shell below. Both rows create stacking
+   contexts (backdrop-filter), so the relative z-index decides the winner. */
+.tabstrip {
+  position: relative;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 0;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: var(--tabbar-bg, var(--panel-bg));
+  backdrop-filter: blur(var(--blur)) saturate(140%);
+}
+
+.tabbar {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-app-region: no-drag;
+}
+
+.tabbar::-webkit-scrollbar { display: none; }
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 160px;
+  min-width: 84px;
+  max-width: 220px;
+  padding: 7px 8px 8px 11px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 9px 9px 0 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.tab:hover { background: rgba(255, 255, 255, 0.06); }
+
+.tab.active {
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel-bg));
+  border-color: var(--border);
+  color: var(--text);
+}
+
+/* Bottom highlight bar on the active tab, like Firefox's selected tab. */
+.tab.active::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent);
+}
+
+.tab.dragging { opacity: 0.55; }
+
+.tab-icon {
+  font-size: 11px;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.tab-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-close {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.12s ease, background 0.12s ease;
+}
+
+.tab:hover .tab-close,
+.tab.active .tab-close { opacity: 1; }
+
+.tab-close:hover { background: rgba(255, 255, 255, 0.12); color: var(--text); }
+
+.newtab-anchor { position: relative; flex: 0 0 auto; }
+
+.newtab-btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.newtab-btn:hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.newtab-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: transparent;
+}
+
+/* Portaled to document.body: fixed positioning here is viewport-relative
+   (no backdrop-filter ancestor), and top/right arrive as inline styles from
+   the "+" button's rect. */
+.newtab-menu {
+  position: fixed;
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--drawer-bg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(24px) saturate(150%);
+}
+
+.newtab-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+}
+
+.newtab-menu button:hover { background: rgba(255, 255, 255, 0.07); }
+
+.newtab-menu .newtab-icon {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  font-size: 13px;
+  flex: 0 0 auto;
+}
+
+.newtab-menu strong { display: block; font-size: 12.5px; color: var(--text); }
+
+.newtab-menu small { display: block; font-size: 11px; color: var(--muted); }
+
+/* ---- Tab panels ---- */
+
+.tab-panel { display: none; min-height: 0; }
+
+.tab-panel.active { display: flex; flex-direction: column; height: 100%; }
+
+.tab-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  min-height: 160px;
+  padding: 24px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.tab-empty p { margin: 0; }
+
+/* ---- Terminal ---- */
+
+.terminal-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+  background: transparent;
+}
+
+.terminal-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--terminal-bg, rgba(8, 10, 14, 0.88));
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.terminal-toolbar-title { font-weight: 600; color: var(--text); }
+
+.terminal-toolbar-spacer { flex: 1; }
+
+.terminal-toolbar button,
+.terminal-toolbar select { padding: 3px 8px; font-size: 12px; }
+
+.terminal-host-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: var(--terminal-bg, rgba(8, 10, 14, 0.88));
+}
+
+.terminal-host {
+  position: absolute;
+  inset: 0;
+  padding: 6px 4px 6px 8px;
+}
+
+/* Blend xterm's chrome into the app: padding, scrollbar, and focus ring. */
+.terminal-host .xterm { height: 100%; }
+
+.terminal-host .xterm-viewport {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 40%, transparent) transparent;
+}
+
+.terminal-host .xterm-viewport::-webkit-scrollbar { width: 9px; }
+
+.terminal-host .xterm-viewport::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 34%, transparent);
+  border-radius: 999px;
+}
+
+.terminal-host .xterm-viewport::-webkit-scrollbar-track { background: transparent; }
+
+.terminal-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(6, 8, 12, 0.72);
+  color: var(--muted);
+  font-size: 13px;
+  backdrop-filter: blur(4px);
+}
+
+/* ---- Unified finishing touches ---- */
+
+/* One scrollbar language everywhere (matches the terminal viewport). */
+.settings-body,
+.console-output {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 40%, transparent) transparent;
+}
+
+.settings-body::-webkit-scrollbar,
+.console-output::-webkit-scrollbar { width: 9px; height: 9px; }
+
+.settings-body::-webkit-scrollbar-thumb,
+.console-output::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 34%, transparent);
+  border-radius: 999px;
+}
+
+.settings-body::-webkit-scrollbar-track,
+.console-output::-webkit-scrollbar-track { background: transparent; }
+
+/* Cards get the same hover lift as tabs for a cohesive feel. */
+.conn-card,
+.card {
+  transition: border-color 0.12s ease, background 0.12s ease, transform 0.12s ease;
+}
+
+.conn-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+/* Window control buttons: smooth hover, keep the red close. */
+.window-controls button {
+  transition: background 0.12s ease, color 0.12s ease;
+}

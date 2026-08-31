@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+dist/
+release/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*Zone.Identifier
+*.Zone.Identifier
+
+# Editor directories
+.idea/
+.vscode/
+*.swp
+
+# Packager output that might land outside release/
+*.AppImage
+*.snap
+*.deb
+*.rpm
+*.nupkg

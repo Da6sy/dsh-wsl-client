@@ -1,0 +1,70 @@
+{
+  "name": "deepseek-harness-windows-app",
+  "version": "0.1.0",
+  "description": "Windows desktop web app for DeepSeek Harness (dsh) with WSL and PowerShell connection support.",
+  "main": "src/main/main.js",
+  "author": "DeepSeek Harness App",
+  "license": "MIT",
+  "scripts": {
+    "start": "npm run build:renderer && node node_modules/electron/cli.js .",
+    "dev": "npm run build:renderer && node node_modules/electron/cli.js . --dev",
+    "pack": "npm run build:renderer && node node_modules/electron-builder/cli.js --dir",
+    "dist": "npm run build:renderer && node node_modules/electron-builder/cli.js --win nsis",
+    "dist:portable": "npm run build:renderer && node node_modules/electron-builder/cli.js --win portable",
+    "build:renderer": "node node_modules/vite/bin/vite.js build",
+    "start:react": "npm run build:renderer && node node_modules/electron/cli.js ."
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh": "^0.1.0-rc.6",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-web-links": "^0.12.0",
+    "@xterm/xterm": "^6.0.0",
+    "node-pty": "^1.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "electron": "31.7.7",
+    "electron-builder": "^24.13.3",
+    "vite": "^5.4.21"
+  },
+  "build": {
+    "appId": "com.deepseek.harnessapp",
+    "productName": "DeepSeek Harness",
+    "copyright": "Copyright © 2026 DeepSeek Harness App",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "Image.ico",
+      "dist/renderer-react/**/*"
+    ],
+    "asar": true,
+    "icon": "Image.ico",
+    "win": {
+      "icon": "Image.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "DeepSeek Harness"
+    },
+    "asarUnpack": [
+      "node_modules/@deepseek-ai/dsh/**/*",
+      "node_modules/@deepseek-ai/**/*",
+      "node_modules/@deepseek-ai/cordis/**/*"
+    ]
+  }
+}
