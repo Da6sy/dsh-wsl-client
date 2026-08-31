@@ -23,12 +23,7 @@ An **Electron** desktop application that embeds the official **DeepSeek Harness 
 - Only one dsh Web Shell can be mounted per document: switching between multiple dsh tabs re-boots it; switching between a terminal and a dsh tab does not refresh it.
 
 ### Built-in terminal
-- Renderer: [xterm.js](https://xtermjs.org/) (with `fit` / `web-links` addons); backend: `node-pty`.
-- Connection types:
-  - **WSL**: launched via `wsl.exe -d <distro>`, auto-detecting installed distros; Windows paths are converted to WSL paths with `wslpath`.
-  - **Local / PowerShell**: runs the default shell on the host.
-- Interactions: copy-on-select, `Ctrl+C` copies (sends an interrupt when nothing is selected), right-click paste.
-- Configurable: font family, font size, cursor style (block/underline/bar), cursor blink, scrollback lines, color scheme (follow app accent / classic / ocean / paper).
+- A pseudo-terminal based on xterm.js + node-pty, connecting to WSL (auto-detecting installed distros) or the local shell.
 
 ### Connection management
 | Type | Description |
@@ -40,15 +35,7 @@ An **Electron** desktop application that embeds the official **DeepSeek Harness 
 - Supports connection testing (runs `dsh --version`), default connection, port, and start/stop.
 
 ### Appearance personalization
-- Background image, background opacity, background overlay, blur strength.
-- Per-module opacity: titlebar, tab strip, Harness sidebar, panel, chat area, settings drawer, terminal background.
-- DSH UI readability: background opacity for the settings panel and the text input box.
-- Accent color (also drives buttons, tab highlight and terminal coloring).
-
-### Robustness
-- **Auto-restart**: when dsh dies without an explicit stop, it is relaunched with exponential backoff, capped at 3 times within 5 minutes; every exit prints its reason in the console panel (e.g. `code=1` internal error, killed by signal, etc.).
-- **Session log repair**: safely repairs seq gaps in dsh session JSONL/zstd logs (backs up before rewriting).
-- The command console can run any `dsh` subcommand with live output.
+- Customize the background image, opacity, blur strength and accent color.
 
 ---
 
@@ -101,7 +88,7 @@ DeepSeekHarnessApp/
 ├─ package.json
 ├─ vite.config.js             # renderer build (maps @deepseek-ai/dsh-client-* to vendor/ sources)
 ├─ Image.ico                  # app icon
-├─ vendor/                    # dsh client component sources referenced at build time (committed)
+├─ vendor/                    # dsh client component sources referenced at build time
 └─ src/
    ├─ main/
    │  ├─ main.js              # main process: window, same-origin proxy, IPC, dsh/PTY lifecycle, auto-restart
@@ -129,13 +116,6 @@ DeepSeekHarnessApp/
 | `Ctrl+T` | New dsh page tab |
 | `Ctrl+Shift+T` | New terminal tab |
 | `Ctrl+W` | Close the current tab |
-
----
-
-## Data & config locations
-
-- **Connections / settings / appearance / terminal / tab layout**: Electron `userData` directory (`settings.json`, `connections.json`).
-- **dsh sessions & runtime data**: `~/.dsh` (or the directory set by `DSH_HOME`).
 
 ---
 
