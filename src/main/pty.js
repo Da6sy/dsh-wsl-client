@@ -77,11 +77,31 @@ class PtyManager {
     const cols = Math.max(2, Math.floor(options.cols) || 80);
     const rows = Math.max(2, Math.floor(options.rows) || 24);
 
-    // If the app runs through npm, npm injects <app>/node_modules/.bin into
-    // PATH. WSL would then resolve tools to the Windows-side shims. Strip
-    // those entries before handing PATH to the child, mirroring dsh.js.
     const env = { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor' };
+
+    // Force a UTF-8 locale. Without it the shell's readline counts each CJK
+    // byte as one column, which garbles Chinese text, misplaces the cursor and
+    // breaks wrapping on long lines. C.UTF-8 is encoding-correct and present on
+    // essentially every Linux/WSL distro; only override when the current value
+    // is not already UTF-8.
+    const isUtf8 = (value) => /utf-?8/i.test(value || '');
+    if (!isUtf8(env.LANG)) env.LANG = 'C.UTF-8';
+    if (!isUtf8(env.LC_ALL)) env.LC_ALL = 'C.UTF-8';
+
     if (options.shell === 'wsl') {
+      // wsl.exe only shares the Windows env vars listed in WSLENV; forward the
+      // locale vars (with /u = Win32→WSL) so the Linux shell actually sees them.
+      const forwarded = String(env.WSLENV || '').split(':').filter(Boolean);
+      for (const name of ['LANG', 'LC_ALL']) {
+        if (!forwarded.some((entry) => entry === name || entry.startsWith(`${name}/`))) {
+          forwarded.push(`${name}/u`);
+        }
+      }
+      env.WSLENV = forwarded.join(':');
+
+      // If the app runs through npm, npm injects <app>/node_modules/.bin into
+      // PATH. WSL would then resolve tools to the Windows-side shims. Strip
+      // those entries before handing PATH to the child, mirroring dsh.js.
       for (const key of Object.keys(env)) {
         if (key.toLowerCase() !== 'path' || typeof env[key] !== 'string') continue;
         const separator = env[key].includes(';') ? ';' : ':';

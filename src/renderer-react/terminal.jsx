@@ -175,6 +175,30 @@ export function TerminalView({ tab, active, config, accent, bgOpacity, connectio
     termRef.current = term
     fitRef.current = fit
 
+    // Fit the terminal to its container and push the size to the pty, so the
+    // shell wraps lines at the real column count. Guarded for hidden tabs
+    // (display:none reports a zero box) and mid-frame teardown.
+    const syncSize = () => {
+      if (cancelled || host.clientWidth === 0 || host.clientHeight === 0) return
+      try {
+        fit.fit()
+        if (ptyIdRef.current) window.dshApp.resizePty(ptyIdRef.current, term.cols, term.rows)
+      } catch (_) { /* container vanished mid-frame */ }
+    }
+    let resizeScheduled = false
+    const scheduleResize = () => {
+      if (resizeScheduled) return
+      resizeScheduled = true
+      requestAnimationFrame(() => { resizeScheduled = false; syncSize() })
+    }
+    resizeObserver = new ResizeObserver(scheduleResize)
+    resizeObserver.observe(host)
+    // Re-fit once webfonts settle: measuring before the configured font loads
+    // yields a wrong column count, which shows up as broken line wrapping.
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(() => scheduleResize()).catch(() => {})
+    }
+
     const startPty = async () => {
       // WSL accepts Linux paths; convert a Windows cwd with wslpath first,
       // falling back to the mechanical /mnt/<drive> mapping.
@@ -189,6 +213,8 @@ export function TerminalView({ tab, active, config, accent, bgOpacity, connectio
         }
       }
       if (cancelled) return
+      // Re-fit right before creating so the pty is born at the current size.
+      syncSize()
       const result = await window.dshApp.createPty({
         shell: tab.shell,
         distro: distroRef.current,
@@ -208,6 +234,9 @@ export function TerminalView({ tab, active, config, accent, bgOpacity, connectio
       }
       ptyIdRef.current = result.id
       setStatus('running')
+      // Sync again now that the pty exists (the async gap above may have
+      // resized the box), so the shell's column count matches the display.
+      syncSize()
       term.focus()
 
       offData = window.dshApp.onPtyData(({ id, data }) => {
@@ -224,24 +253,6 @@ export function TerminalView({ tab, active, config, accent, bgOpacity, connectio
       })
     }
     startPty()
-
-    // Resize: fit to the container, then tell the pty. Guarded for hidden
-    // tabs (display:none reports a zero box).
-    let resizeScheduled = false
-    const scheduleResize = () => {
-      if (resizeScheduled) return
-      resizeScheduled = true
-      requestAnimationFrame(() => {
-        resizeScheduled = false
-        if (cancelled || host.clientWidth === 0 || host.clientHeight === 0) return
-        try {
-          fit.fit()
-          if (ptyIdRef.current) window.dshApp.resizePty(ptyIdRef.current, term.cols, term.rows)
-        } catch (_) { /* container vanished mid-frame */ }
-      })
-    }
-    resizeObserver = new ResizeObserver(scheduleResize)
-    resizeObserver.observe(host)
 
     return () => {
       cancelled = true
