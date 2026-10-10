@@ -1,7 +1,7 @@
 'use strict';
 
 const os = require('node:os');
-const { execFile } = require('node:child_process');
+const { execFile, spawnSync } = require('node:child_process');
 
 /**
  * PTY session manager for the built-in terminal tabs.
@@ -29,6 +29,50 @@ class PtyManager {
       this._pty = require('node-pty');
     }
     return this._pty;
+  }
+
+  /**
+   * Locale env fix for local (non-Windows) shells, probed once and cached.
+   *
+   * bash/readline measures CJK through wcwidth() under the CURRENT locale.
+   * WSL / minimal Linux images often export LANG=en_US.UTF-8 without the
+   * locale actually being generated, so glibc silently falls back to the C
+   * locale (`locale charmap` → ANSI_X3.4-1968). readline then counts every
+   * UTF-8 byte of a Chinese char as one column while xterm.js renders two —
+   * cursor desync, overwritten text, corrupted long-line redraw. When the
+   * inherited env does not resolve to UTF-8, pin an available UTF-8 locale
+   * (prefer C.UTF-8; otherwise the first UTF-8 entry of `locale -a`).
+   * @returns {object} env overrides (empty when nothing needs fixing)
+   */
+  localeEnv() {
+    if (this._localeEnv !== undefined) return this._localeEnv;
+    let fix = {};
+    if (process.platform !== 'win32') {
+      try {
+        const isUtf8 = (value) => /utf-?8/i.test(String(value || ''));
+        const charmap = (env) => {
+          const probe = spawnSync('locale', ['charmap'], { env, timeout: 5000 });
+          return probe.status === 0 ? String(probe.stdout || '').trim() : '';
+        };
+        if (!isUtf8(charmap(process.env))) {
+          const list = spawnSync('locale', ['-a'], { timeout: 5000 });
+          const available = String(list.stdout || '')
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter(Boolean);
+          const candidate = available.find((name) => /^C\.(utf-?8)$/i.test(name))
+            || available.find((name) => isUtf8(name));
+          // Verify the candidate really resolves to UTF-8 before pinning it.
+          if (candidate && isUtf8(charmap({ ...process.env, LANG: candidate, LC_ALL: candidate }))) {
+            fix = { LANG: candidate, LC_ALL: candidate };
+          }
+        }
+      } catch (_) {
+        // Probe unavailable: keep the inherited environment untouched.
+      }
+    }
+    this._localeEnv = fix;
+    return fix;
   }
 
   /**
@@ -77,31 +121,14 @@ class PtyManager {
     const cols = Math.max(2, Math.floor(options.cols) || 80);
     const rows = Math.max(2, Math.floor(options.rows) || 24);
 
-    const env = { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor' };
-
-    // Force a UTF-8 locale. Without it the shell's readline counts each CJK
-    // byte as one column, which garbles Chinese text, misplaces the cursor and
-    // breaks wrapping on long lines. C.UTF-8 is encoding-correct and present on
-    // essentially every Linux/WSL distro; only override when the current value
-    // is not already UTF-8.
-    const isUtf8 = (value) => /utf-?8/i.test(value || '');
-    if (!isUtf8(env.LANG)) env.LANG = 'C.UTF-8';
-    if (!isUtf8(env.LC_ALL)) env.LC_ALL = 'C.UTF-8';
-
+    // If the app runs through npm, npm injects <app>/node_modules/.bin into
+    // PATH. WSL would then resolve tools to the Windows-side shims. Strip
+    // those entries before handing PATH to the child, mirroring dsh.js.
+    // Local non-Windows shells additionally get the UTF-8 locale fix (see
+    // localeEnv); WSL sessions manage their own locale inside the distro.
+    const localeFix = options.shell === 'wsl' ? {} : this.localeEnv();
+    const env = { ...process.env, ...localeFix, TERM: 'xterm-256color', COLORTERM: 'truecolor' };
     if (options.shell === 'wsl') {
-      // wsl.exe only shares the Windows env vars listed in WSLENV; forward the
-      // locale vars (with /u = Win32→WSL) so the Linux shell actually sees them.
-      const forwarded = String(env.WSLENV || '').split(':').filter(Boolean);
-      for (const name of ['LANG', 'LC_ALL']) {
-        if (!forwarded.some((entry) => entry === name || entry.startsWith(`${name}/`))) {
-          forwarded.push(`${name}/u`);
-        }
-      }
-      env.WSLENV = forwarded.join(':');
-
-      // If the app runs through npm, npm injects <app>/node_modules/.bin into
-      // PATH. WSL would then resolve tools to the Windows-side shims. Strip
-      // those entries before handing PATH to the child, mirroring dsh.js.
       for (const key of Object.keys(env)) {
         if (key.toLowerCase() !== 'path' || typeof env[key] !== 'string') continue;
         const separator = env[key].includes(';') ? ';' : ':';

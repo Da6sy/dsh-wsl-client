@@ -109,9 +109,15 @@ export function TerminalView({ tab, active, config, accent, bgOpacity, connectio
   }, [])
 
   const pasteFromClipboard = useCallback(async () => {
+    const term = termRef.current
     const result = await window.dshApp?.clipboardRead?.()
-    if (result?.ok && result.text && ptyIdRef.current) {
-      window.dshApp.writePty(ptyIdRef.current, result.text)
+    if (result?.ok && result.text && term && ptyIdRef.current) {
+      // Route through xterm's paste() instead of a raw writePty: it
+      // normalizes \r?\n → \r and wraps the text in bracketed-paste markers
+      // (ESC[200~/ESC[201~) when the shell enabled DECSET 2004, so multi-line
+      // content is inserted verbatim instead of executing line-by-line. The
+      // data re-enters our onData handler, which forwards it to the pty.
+      term.paste(result.text)
     }
   }, [])
 
@@ -275,12 +281,28 @@ export function TerminalView({ tab, active, config, accent, bgOpacity, connectio
   useEffect(() => {
     const term = termRef.current
     if (!term) return
+    const before = { cols: term.cols, rows: term.rows }
     term.options.fontFamily = `${config.fontFamily}, Consolas, "Microsoft YaHei Mono", monospace`
     term.options.fontSize = config.fontSize
     term.options.cursorStyle = config.cursorStyle
     term.options.cursorBlink = config.cursorBlink
     term.options.scrollback = config.scrollback
     term.options.theme = buildTheme(config, accent, bgOpacity)
+    // Font family/size changes alter the cell metrics but NOT the grid: without
+    // a re-fit the terminal keeps the old cols while rendering wider/narrower
+    // cells — content overflows the clipped viewport, long lines wrap at the
+    // stale width (off-screen), and arrow-key redraws land outside the view.
+    // Re-fit on the next frame and push the new size to the pty ONLY when the
+    // grid actually changed (keeps theme-only tweaks from nudging the shell).
+    const raf = requestAnimationFrame(() => {
+      try { fitRef.current?.fit() } catch (_) { /* hidden container */ }
+      const current = termRef.current
+      if (current && ptyIdRef.current
+        && (current.cols !== before.cols || current.rows !== before.rows)) {
+        window.dshApp.resizePty(ptyIdRef.current, current.cols, current.rows)
+      }
+    })
+    return () => cancelAnimationFrame(raf)
   }, [config, accent, bgOpacity])
 
   // Reactivate: re-fit (display:none collapsed the box) and take focus.
