@@ -92,7 +92,13 @@ class PtyManager {
       const wsl = connection.wslPath || 'wsl.exe';
       const args = [];
       if (options.distro) args.push('-d', options.distro);
-      if (cwd) args.push('--cd', cwd);
+      // Always pin the start directory. Without --cd, wsl.exe inherits the
+      // Electron main process's Windows working directory and translates it
+      // into a Linux path (\\wsl.localhost\... UNC paths included). If the app
+      // was launched from a directory that no longer exists in the distro,
+      // every session start fails with `chdir(...) failed 2` and falls back
+      // home. '~' makes the Linux home the deterministic default.
+      args.push('--cd', cwd || '~');
       return { command: wsl, args };
     }
 

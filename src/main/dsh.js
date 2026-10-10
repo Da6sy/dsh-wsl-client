@@ -112,9 +112,11 @@ function buildSpawnDescriptor(connection, args, options = {}) {
     if (connection.wslDistro) {
       wslArgs.push('-d', connection.wslDistro);
     }
-    if (requestedCwd) {
-      wslArgs.push('--cd', requestedCwd);
-    }
+    // Always pin the start directory ('~' when unset): a bare wsl.exe
+    // inherits the Electron main process cwd and translates \\wsl.localhost
+    // UNC paths back to Linux paths — a stale/deleted inherited dir makes
+    // every spawn fail with `chdir(...) failed 2`. See pty.js resolveShell.
+    wslArgs.push('--cd', requestedCwd || '~');
     const remoteDsh = connection.dshPath && connection.dshPath.trim()
       ? connection.dshPath.trim()
       : 'dsh';
