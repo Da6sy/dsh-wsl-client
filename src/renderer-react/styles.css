@@ -831,9 +831,12 @@ button.danger:hover {
 }
 
 .terminal-host {
+  /* Inset positioning instead of padding: FitAddon sizes the grid from this
+     element's computed height, which under `* { box-sizing: border-box }`
+     includes padding — padding here made the grid one row taller than the
+     visible area, clipping the top half row and the bottom help row. */
   position: absolute;
-  inset: 0;
-  padding: 6px 4px 6px 8px;
+  inset: 6px 4px 6px 8px;
 }
 
 /* Blend xterm's chrome into the app: padding, scrollbar, and focus ring. */

@@ -143,6 +143,20 @@ class PtyManager {
           .filter((entry) => !/node_modules[\\/]\.bin$/i.test(entry.trim()))
           .join(separator);
       }
+      // wsl.exe only shares WSLENV-listed vars across the Windows→WSL
+      // boundary, so TERM/COLORTERM set above are silently dropped and the
+      // session falls back to WSL's defaults. Without COLORTERM=truecolor,
+      // TUIs that probe color support (codex, lazygit, …) degrade their
+      // styling — codex drops the gray user-message/composer "pill" and its
+      // composer chrome entirely. Forward both (/u = Win32→WSL only).
+      const forwarded = new Set(String(env.WSLENV || '').split(':').filter(Boolean));
+      for (const name of ['TERM', 'COLORTERM']) {
+        forwarded.delete(name);
+        forwarded.delete(`${name}/u`);
+        forwarded.delete(`${name}/p`);
+        forwarded.add(`${name}/u`);
+      }
+      env.WSLENV = [...forwarded].join(':');
     }
 
     const descriptor = {

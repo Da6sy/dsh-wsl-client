@@ -25,6 +25,16 @@ export const DEFAULT_TERMINAL_CONFIG = {
   colorScheme: 'accent',
 }
 
+/**
+ * Build the xterm font stack. Latin glyphs come from the configured font;
+ * CJK falls back through real installed Windows families (YaHei, NSimSun).
+ * Note: "Microsoft YaHei Mono" is NOT an installed font family name — listing
+ * it silently drops CJK to the generic default with oversized glyphs.
+ */
+export function fontStack(family) {
+  return `${family}, Consolas, "Microsoft YaHei", "NSimSun", monospace`
+}
+
 // Fixed ANSI palettes for the independent-scheme option. 'accent' builds its
 // ANSI set around the app accent color instead.
 const PALETTES = {
@@ -138,7 +148,11 @@ export function TerminalView({ tab, active, config, accent, bgOpacity, connectio
       cursorStyle: config.cursorStyle,
       cursorBlink: config.cursorBlink,
       fontSize: config.fontSize,
-      fontFamily: `${config.fontFamily}, Consolas, "Microsoft YaHei Mono", monospace`,
+      // Real installed CJK families: "Microsoft YaHei Mono" does not exist as
+      // a Windows font (verified against C:\Windows\Fonts), so CJK used to
+      // fall through to the generic default — oversized glyphs filling the
+      // whole line box. YaHei covers CJK; NSimSun is the dual-width fallback.
+      fontFamily: fontStack(config.fontFamily),
       scrollback: config.scrollback,
       theme: buildTheme(config, accent, bgOpacity),
     })
@@ -282,7 +296,7 @@ export function TerminalView({ tab, active, config, accent, bgOpacity, connectio
     const term = termRef.current
     if (!term) return
     const before = { cols: term.cols, rows: term.rows }
-    term.options.fontFamily = `${config.fontFamily}, Consolas, "Microsoft YaHei Mono", monospace`
+    term.options.fontFamily = fontStack(config.fontFamily)
     term.options.fontSize = config.fontSize
     term.options.cursorStyle = config.cursorStyle
     term.options.cursorBlink = config.cursorBlink
